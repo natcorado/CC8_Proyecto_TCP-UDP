@@ -82,12 +82,19 @@ public class SMTPServer {
                                 if (headerEndIndex != -1) {
                                     headers = rawEmail.substring(0, headerEndIndex);
                                     body = rawEmail.substring(headerEndIndex + 2);
-                                }
-                                else {
+                                } else {
                                     headers = rawEmail;
                                     body = "";
                                 }
-                                EmailDatabase.getInstance().saveEmail(sender, recipient, headers, body);
+
+                                String messageId = extractMessageId(headers);
+                                if (messageId == null) {
+                                    // Generate a fallback message ID if none is found
+                                    messageId = UUID.randomUUID().toString() + "@" + DOMAIN;
+                                    System.err.println("Warning: No Message-ID found. Generated a new one: " + messageId);
+                                }
+
+                                EmailDatabase.getInstance().saveEmail(messageId, sender, recipient, headers, body);
                                 System.out.println("Email from " + sender + " to " + recipient + " saved to local database.");
                             } else {
                                 // Forward via UDP
@@ -145,6 +152,20 @@ public class SMTPServer {
                     System.err.println("Error closing socket: " + e.getMessage());
                 }
             }
+        }
+
+        private String extractMessageId(String headers) {
+            try (BufferedReader reader = new BufferedReader(new StringReader(headers))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.toUpperCase().startsWith("MESSAGE-ID:")) {
+                        return line.substring(line.indexOf(':') + 1).trim();
+                    }
+                }
+            } catch (IOException e) {
+                // Should not happen with StringReader
+            }
+            return null;
         }
 
         private void sendUdpBroadcast(String from, String to, String data) {

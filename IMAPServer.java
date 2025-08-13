@@ -313,7 +313,13 @@ public class IMAPServer {
                     return;
                 }
 
-                EmailDatabase.getInstance().saveEmail(loggedInUser, recipient, headers, body);
+                String messageId = extractMessageId(headers);
+                if (messageId == null) {
+                    messageId = UUID.randomUUID().toString() + "@" + loggedInUser.substring(loggedInUser.indexOf('@') + 1);
+                    System.err.println("Warning: No Message-ID found in APPEND. Generated a new one: " + messageId);
+                }
+
+                EmailDatabase.getInstance().saveEmail(messageId, loggedInUser, recipient, headers, body);
                 send(tag + " OK APPEND completed");
             } catch (NumberFormatException e) {
                 send(tag + " BAD Invalid literal size in APPEND command.");
@@ -325,6 +331,20 @@ public class IMAPServer {
                 e.printStackTrace();
                 send(tag + " BAD Error during APPEND");
             }
+        }
+
+        private String extractMessageId(String headers) {
+            try (BufferedReader reader = new BufferedReader(new StringReader(headers))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.toUpperCase().startsWith("MESSAGE-ID:")) {
+                        return line.substring(line.indexOf(':') + 1).trim();
+                    }
+                }
+            } catch (IOException e) {
+                // Should not happen with StringReader
+            }
+            return null;
         }
     }
 }

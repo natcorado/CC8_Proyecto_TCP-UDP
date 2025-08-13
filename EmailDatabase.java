@@ -33,6 +33,7 @@ public class EmailDatabase {
     private void createTables() {
         String emailTableSql = "CREATE TABLE IF NOT EXISTS SMTP_DB ( " +
                              " IDmail    INTEGER PRIMARY KEY AUTOINCREMENT," +
+                             " MessageID TEXT    NOT NULL UNIQUE," +
                              " MAIL_FROM TEXT    NOT NULL, " + 
                              " RCPT_TO   TEXT    NOT NULL, " + 
                              " HEADERS   TEXT, " + 
@@ -53,18 +54,23 @@ public class EmailDatabase {
         }
     }
 
-    public synchronized void saveEmail(String from, String to, String headers, String body) {
-        String sql = "INSERT INTO SMTP_DB(MAIL_FROM, RCPT_TO, HEADERS, BODY) VALUES(?,?,?,?);";
+    public synchronized void saveEmail(String messageId, String from, String to, String headers, String body) {
+        String sql = "INSERT INTO SMTP_DB(MessageID, MAIL_FROM, RCPT_TO, HEADERS, BODY) VALUES(?,?,?,?,?);";
 
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, from);
-            pstmt.setString(2, to);
-            pstmt.setString(3, headers);
-            pstmt.setString(4, body);
+            pstmt.setString(1, messageId);
+            pstmt.setString(2, from);
+            pstmt.setString(3, to);
+            pstmt.setString(4, headers);
+            pstmt.setString(5, body);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            System.err.println("Error saving email: " + e.getMessage());
+            if (e.getErrorCode() == 19) { // UNIQUE constraint failed
+                System.err.println("Attempted to save a duplicate email. Message-ID: " + messageId);
+            } else {
+                System.err.println("Error saving email: " + e.getMessage());
+            }
         }
     }
 

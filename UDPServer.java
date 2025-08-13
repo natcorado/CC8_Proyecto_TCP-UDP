@@ -54,7 +54,8 @@ public class UDPServer {
         }
 
         if (sender != null) {
-            EmailDatabase.getInstance().saveEmail(sender, recipient, headers, body);
+            String messageId = java.util.UUID.randomUUID().toString() + "@" + LOCAL_DOMAIN;
+            EmailDatabase.getInstance().saveEmail(messageId, sender, recipient, headers, body);
             System.out.println("Email from " + sender + " to " + recipient + " saved via UDP.");
         }
     }
