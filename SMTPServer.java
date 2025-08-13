@@ -3,7 +3,7 @@ import java.io.*;
 import java.util.*;
 
 public class SMTPServer {
-    private static final String DOMAIN = "npc.com";
+    private static final String DOMAIN = "martinez.com";
     private static final int PORT = 25;
     private static final int UDP_PORT = 345;
 

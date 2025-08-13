@@ -21,7 +21,7 @@ all: $(CLASSES)
 
 $(OUT_DIR)/%.class: %.java
 	@mkdir -p $(OUT_DIR)
-	$(JC) $(JFLAGS) -d $(OUT_DIR) -cp $(LIB) $<
+	$(JC) $(JFLAGS) -d $(OUT_DIR) -cp $(OUT_DIR):$(LIB) $<
 
 # --- Run Rules ---
 run-smtp: all

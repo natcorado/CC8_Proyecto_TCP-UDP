@@ -7,8 +7,7 @@ public class IMAPServer {
 
     public static void main(String[] args) {
         // Create a default user for testing purposes
-        EmailDatabase.getInstance().createUser("test@npc.com", "password");
-        EmailDatabase.getInstance().createUser("prueba@npc.com", "password");
+        EmailDatabase.getInstance().createUser("christian@martinez.com", "123");
         startServer();
     }
 
