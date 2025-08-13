@@ -1,41 +1,44 @@
-JFLAGS = -g
-JLIB = -classpath ".:sqlite-jdbc-3.7.2.jar"
+# Compiler and JVM settings
 JC = javac
-JVM= java
-.SUFFIXES: .java .class
-.java.class:
-		$(JC) $(JFLAGS) $(JLIB)  $*.java
+JVM = java
+JFLAGS = -g
+LIB = sqlite-jdbc-3.7.2.jar
+OUT_DIR = bin
 
-CLASSES = \
-		SQLiteJDBC.java 
+# Classpath for compilation and execution
+CP = -cp $(OUT_DIR):$(LIB)
 
-SQLite = SQLiteJDBC
+# Find all .java files in the current directory
+SOURCES = $(wildcard *.java)
+# Generate .class file paths in the output directory
+CLASSES = $(SOURCES:%.java=$(OUT_DIR)/%.class)
 
-default: classes
+# The default target to be executed when you just run "make"
+default: all
 
-classes: $(CLASSES:.java=.class)
+# Compile all java files
+all: $(CLASSES)
 
-run: $(MAIN).class
-		$(JVM) $(MAIN) $(ARGS)
+$(OUT_DIR)/%.class: %.java
+	@mkdir -p $(OUT_DIR)
+	$(JC) $(JFLAGS) -d $(OUT_DIR) -cp $(LIB) $<
 
+# --- Run Rules ---
+run-smtp: all
+	$(JVM) $(CP) SMTPServer
+
+run-imap: all
+	$(JVM) $(CP) IMAPServer
+
+run-udp: all
+	$(JVM) $(CP) UDPServer
+
+# --- Cleanup ---
 clean:
-		$(RM) *.class
-		$(RM) logs/*
-		$(RM) SMTP_SERVER.db
-		
-compile:
-		$(JC) -cp .:sqlite-jdbc-3.7.2.jar *.$(JVM)
+	@echo "Cleaning up compiled files and database..."
+	@rm -rf $(OUT_DIR)
+	@rm -f SMTP_SERVER.db
+	@echo "Cleanup complete."
 
-run-smtp:
-		$(JVM) $(JLIB) SMTPServer
-
-run-imap:
-		$(JVM) $(JLIB) IMAPServer
-
-run-udp:
-		$(JVM) $(JLIB) UDPServer
-
-
-exampleDB: $(SQLite).class
-		$(JVM) $(JLIB) $(SQLite)
-
+# Phony targets are not real files
+.PHONY: all clean run-smtp run-imap run-udp
