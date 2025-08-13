@@ -12,8 +12,8 @@ public class SQLiteJDBC {
 			System.out.println("Opened database successfully");
 
 			stmt = c.createStatement();
-			String sql = "CREATE TABLE IF NOT EXISTS SMTP_DB ( " +
-			" IDmail    INTEGER PRIMARY KEY AUTOINCREMENT," +
+			String sql = "CREATE TABLE IF NOT EXISTS SMTP_DB ( " + 
+			" IDmail    INTEGER PRIMARY KEY AUTOINCREMENT," + 
 			" MAIL_FROM TEXT    NOT NULL, " + 
 			" RCPT_TO   TEXT    NOT NULL, " + 
 			" DATA      TEXT, " + 
@@ -21,7 +21,7 @@ public class SQLiteJDBC {
 			stmt.executeUpdate(sql);
 
 			sql = "INSERT INTO SMTP_DB (MAIL_FROM, RCPT_TO, DATA) " +
-			"VALUES (\"MAIL_FROM@lab03.com\", \"RCPT_TO@gmail.com\", \"HOLA MUNDO!\");";
+			"VALUES ('MAIL_FROM@lab03.com', 'RCPT_TO@gmail.com', 'HOLA MUNDO!')";
 
 			stmt.executeUpdate(sql);
 			stmt.executeUpdate(sql);

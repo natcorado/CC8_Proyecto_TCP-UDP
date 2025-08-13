@@ -3,9 +3,9 @@ import java.io.*;
 import java.util.*;
 
 public class SMTPServer {
-    private static final String DOMAIN = "piplo.com";
+    private static final String DOMAIN = "npc.com";
     private static final int PORT = 25;
-    private ServerSocket serverSocket;
+    private static final int UDP_PORT = 345;
 
     public static void main(String[] args) {
         startServer();
@@ -17,11 +17,6 @@ public class SMTPServer {
             System.out.println("SMTP Server started on port " + PORT);
             
             while (true) {
-                /*
-                * SessionHandler implements Runnable to enable multi-client support
-                * - The run() method contains all client interaction logic
-                * SO Each instance handles exactly one client connection
-                */
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New client connected: " + clientSocket.getInetAddress());
                 new Thread(new SessionHandler(clientSocket)).start();
@@ -30,13 +25,6 @@ public class SMTPServer {
             System.err.println("Failed to start server: " + e.getMessage());
         }
     }
-
-
-    /* 
-    * serverSocket.accept() waits for and accepts an incoming client connection.
-    * Once a client connects, it returns a new Socket object for communication.
-    * This allows the server to handle multiple clients concurrently (each in a separate thread).
-    */
 
     static class SessionHandler implements Runnable {
         private Socket clientSocket;
@@ -82,10 +70,33 @@ public class SMTPServer {
                     if (dataMode) {
                         if (inputLine.equals(".")) {
                             dataMode = false;
-                            System.out.println("Email received from " + sender + " to " + recipient);
-                            System.out.println("Content:\n" + emailData.toString());
+                            String rawEmail = emailData.toString();
+                            
+                            String recipientDomain = recipient.substring(recipient.indexOf('@') + 1);
+
+                            if (recipientDomain.equalsIgnoreCase(DOMAIN)) {
+                                // Local delivery
+                                String headers;
+                                String body;
+                                int headerEndIndex = rawEmail.indexOf("\n\n");
+                                if (headerEndIndex != -1) {
+                                    headers = rawEmail.substring(0, headerEndIndex);
+                                    body = rawEmail.substring(headerEndIndex + 2);
+                                }
+                                else {
+                                    headers = rawEmail;
+                                    body = "";
+                                }
+                                EmailDatabase.getInstance().saveEmail(sender, recipient, headers, body);
+                                System.out.println("Email from " + sender + " to " + recipient + " saved to local database.");
+                            } else {
+                                // Forward via UDP
+                                System.out.println("Forwarding email to external domain " + recipientDomain + " via UDP.");
+                                sendUdpBroadcast(sender, recipient, rawEmail);
+                            }
+                            
                             sendResponse(250, "Message accepted for delivery");
-                            emailData.setLength(0); 
+                            emailData.setLength(0);
                         } else {
                             if (inputLine.startsWith(".")) {
                                 inputLine = inputLine.substring(1);
@@ -94,19 +105,19 @@ public class SMTPServer {
                         }
                     } else {
                         String upperInput = inputLine.toUpperCase();
-                        if (upperInput.startsWith("HELO")) {
+                        if (upperInput.startsWith("HELO") || upperInput.startsWith("EHLO")) {
                             sendResponse(250, DOMAIN + " Hello");
                         } else if (upperInput.startsWith("MAIL FROM:")) {
                             sender = extractEmail(inputLine);
                             if (sender != null) {
-                                sendResponse(250, "Sender OK");
+                                sendResponse(250, "OK");
                             } else {
                                 sendResponse(501, "Syntax error in MAIL FROM");
                             }
                         } else if (upperInput.startsWith("RCPT TO:")) {
                             recipient = extractEmail(inputLine); 
                             if (recipient != null) {
-                                sendResponse(250, "Recipient OK");
+                                sendResponse(250, "OK");
                             } else {
                                 sendResponse(501, "Syntax error in RCPT TO");
                             }
@@ -135,41 +146,24 @@ public class SMTPServer {
                 }
             }
         }
+
+        private void sendUdpBroadcast(String from, String to, String data) {
+            try (DatagramSocket socket = new DatagramSocket()) {
+                socket.setBroadcast(true);
+                String message = "MAIL FROM:<" + from + ">\n" + 
+                                 "RCPT TO:<" + to + ">\n" + 
+                                 "DATA\n" + 
+                                 data;
+                byte[] buffer = message.getBytes();
+                
+                InetAddress broadcastAddress = InetAddress.getByName("255.255.255.255");
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, broadcastAddress, UDP_PORT);
+                
+                socket.send(packet);
+                System.out.println("UDP broadcast sent.");
+            } catch (IOException e) {
+                System.err.println("Error sending UDP broadcast: " + e.getMessage());
+            }
+        }
     }
 }
-
-    
-/*import java.net.*;
-import java.io.*;
-
-public class SMTPServer {
-    public static void main(String[] args) {
-
-        try (ServerSocket serverSocket = new ServerSocket(25)) {
-            System.out.println("SMTP server is running on port 25...");
-
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getInetAddress());
-
-                BufferedReader in = new BufferedReader(
-                    new InputStreamReader(clientSocket.getInputStream())
-                );
-
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    System.out.println("Received: " + inputLine);
-                    if (inputLine.equalsIgnoreCase("quit")) break;
-                }
-
-                System.out.println("give me a bottle of rum!");
-                in.close();
-                clientSocket.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println("Give me a bottle of rum!");
-
-    }
-}*/

@@ -22,6 +22,19 @@ clean:
 		$(RM) *.class
 		$(RM) logs/*
 		$(RM) SMTP_SERVER.db
+		
+compile:
+		$(JC) -cp .:sqlite-jdbc-3.7.2.jar *.$(JVM)
+
+run-smtp:
+		$(JVM) $(JLIB) SMTPServer
+
+run-imap:
+		$(JVM) $(JLIB) IMAPServer
+
+run-udp:
+		$(JVM) $(JLIB) UDPServer
+
 
 exampleDB: $(SQLite).class
 		$(JVM) $(JLIB) $(SQLite)
